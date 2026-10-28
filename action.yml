@@ -1,0 +1,50 @@
+name: Deploy to Light Cloud
+description: Deploy an app on Light Cloud from a workflow and follow the build until it is live.
+author: Light Cloud
+branding:
+  icon: cloud
+  color: blue
+
+inputs:
+  api-key:
+    description: A Light Cloud API key (Organisation settings -> API keys). Store it as a secret.
+    required: true
+  app:
+    description: App name or id. Leave empty when the repository has a .lightcloud file.
+    required: false
+    default: ""
+  environment:
+    description: Environment to deploy. Defaults to the app's production environment.
+    required: false
+    default: ""
+  upload:
+    description: "true to upload the checked-out folder instead of deploying from the connected Git repository."
+    required: false
+    default: "false"
+  working-directory:
+    description: Folder to run in (and to upload, with upload true).
+    required: false
+    default: "."
+  cli-version:
+    description: Version of @light-cloud/cli to run.
+    required: false
+    default: "latest"
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        LIGHT_CLOUD_API_KEY: ${{ inputs.api-key }}
+        LC_APP: ${{ inputs.app }}
+        LC_ENV: ${{ inputs.environment }}
+        LC_UPLOAD: ${{ inputs.upload }}
+        LC_CLI: ${{ inputs.cli-version }}
+      run: |
+        # Inputs go through env vars, never interpolated into the script.
+        args=(deploy --yes)
+        [ -n "$LC_APP" ] && args+=("$LC_APP")
+        [ -n "$LC_ENV" ] && args+=(--env "$LC_ENV")
+        [ "$LC_UPLOAD" = "true" ] && args+=(--upload)
+        npx --yes "@light-cloud/cli@$LC_CLI" "${args[@]}"
